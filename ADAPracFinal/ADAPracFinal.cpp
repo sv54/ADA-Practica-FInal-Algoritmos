@@ -98,7 +98,7 @@ double knapsack_c(
 	double acc_v = 0.0;
 	for (auto i : idx) {
 		for (int j = m[i]; j > 0; j--) {
-			if (W > 0) {
+			if (W > 0) {//
 				if (w[i] * j >= W) { //>=
 					acc_v += (W / (w[i])) * v[i];
 					W = 0;
