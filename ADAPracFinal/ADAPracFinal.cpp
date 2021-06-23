@@ -87,16 +87,16 @@ double knapsack_c(
 	unsigned k,
 	double W // knapsack weight limit
 ) {
-	vector<size_t> idx(w.size()); // objects sorted by value density
+	/*vector<size_t> idx(w.size()); // objects sorted by value density
 	for (size_t i = 0; i < idx.size(); i++) idx[i] = i;
 
 	sort(begin(idx), end(idx),
 		[&v, &w](size_t x, size_t y) { // function "bigger than"
 			return v[x] / w[x] > v[y] / w[y]; // sorts form bigger to lower
 		}
-	);
-	double acc_v = 0.0;
-	for (auto i : idx) {
+	);*/
+
+	/*for (auto i : idx) {
 		for (int j = m[i]; j > 0; j--) {
 			if (W > 0) {//
 				if (w[i] * j >= W) { //>=
@@ -114,7 +114,21 @@ double knapsack_c(
 		}
 	}
 	return acc_v;
+	*/
+	int n = m.size();
+	double acc_v = 0.0;
+	for (int j = k; j < n; ++j) {
+		if (W > 0) {//
+			if (w[j] * m[j] >= W) { //>=
+				acc_v += (W / (w[j])) * v[j];
+				break;
+			}
 
+				acc_v += v[j] * m[j];
+				W -= w[j] * m[j];
+		}
+	}
+	return acc_v;
 }
 
 
@@ -205,12 +219,11 @@ void vueltaatras(const vector<double>& v, const vector<double>& w, double W, con
 		//cout << "k==x.size" << endl;
 		return;
 	}
-	for (unsigned j = 0; j < m[k]; j++) {
+	for (int j = m[k]; j >= 0 ; j--) {
 		 x[k] = j;
 		 double present_w = acc_w + x[k] * w[k];
 		 double present_v = acc_v + x[k] * v[k];
 		 if (present_w <= W && present_v + knapsack_c(v, w, m, k + 1, W - present_w) > best_v) { // if it is feasible
-			 //cout << "RECURSION" << endl;
 			 vueltaatras(v, w, W, m, k + 1, x, best_v, sol, present_w, present_v); // expand
 		 }
 		
@@ -220,9 +233,27 @@ void vueltaatras(const vector<double>& v, const vector<double>& w, double W, con
 
 
 double vueltaatras1(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W) {
+
+	vector<size_t> idx(v.size()); // index vector
+	iota(begin(idx), end(idx), 0);
+
+	sort(begin(idx), end(idx),
+		[&v, &w](size_t i, size_t j) {
+			return v[i] / w[i] > v[j] / w[j];
+		}
+	);
+
+	vector<double> s_v(v.size()), s_w(w.size());
+	vector<unsigned> s_m(w.size());
+	for (size_t i = 0; i < v.size(); i++) {
+		s_v[i] = v[idx[i]]; // sorted values
+		s_w[i] = w[idx[i]]; // sorted weights
+		s_m[i] = m[idx[i]];
+	}
+
 	vector<unsigned> x(v.size()), sol(v.size());
-	double best_v = knapsack_d(v, w, m, W);
-	vueltaatras(v, w, W,m, 0, x, best_v, sol, 0, 0);
+	double best_v = knapsack_d(s_v, s_w, s_m, W);
+	vueltaatras(s_v, s_w, W,s_m, 0, x, best_v, sol, 0, 0);
 	return best_v;
 
 }
@@ -249,7 +280,7 @@ int main(int argc, char* argv[]) {
 		vector<unsigned> m; // maximo, valor
 
 
-		nombreFichero = "potter_n15.def";
+		nombreFichero = "potter_n60.def";
 		//nombreFichero = "mipotter.def.txt";
 
 		if (!leerFichero(nombreFichero, n, T, t, v, m))
@@ -261,12 +292,28 @@ int main(int argc, char* argv[]) {
 		clock_t start = clock();
 		//resul= vueltaatras1(v, t, T, sol);
 		//knapsack(v, m, t, T);
+		vector<size_t> idx(v.size()); // index vector
+		iota(begin(idx), end(idx), 0);
+
+		sort(begin(idx), end(idx),
+			[&v, &t](size_t i, size_t j) {
+				return v[i] / t[i] > v[j] / t[j];
+			}
+		);
+
+		vector<double> s_v(v.size()), s_t(t.size());
+		vector<unsigned> s_m(t.size());
+		for (size_t i = 0; i < v.size(); i++) {
+			s_v[i] = v[idx[i]]; // sorted values
+			s_t[i] = t[idx[i]]; // sorted weights
+			s_m[i] = m[idx[i]];
+		}
 		resul = knapsack_d(v, t,m, T);
-		cout << "resul:" << resul << endl;
-		resul = knapsack_c(v, t,m,0, T);
-		cout << "resul:" << resul<<endl;
+		cout << "_d:" << resul << endl;
+		resul = knapsack_c(s_v, s_t,s_m,0, T);
+		cout << "_c:" << resul<<endl;
 		resul = vueltaatras1(v, t, m, T);
-		cout << "resul:" << resul << endl;
+		cout << "vueltaatras: " << resul << endl;
 		clock_t end = clock();
 		cout << (double(end - start) / ((clock_t)1000)) << "s" << endl;
 
