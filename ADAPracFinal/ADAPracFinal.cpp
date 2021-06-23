@@ -157,15 +157,15 @@ double knapsack_d(
 		}
 	}*/
 	
-
-	for (int j = k; j < m.size(); ++j) {
-		if (w[j] * m[j] <= W) {
-			acc_v += v[j] * m[j];
-			W -= w[j] * m[j];
+	for (int i = k; i < m.size(); i++) {
+		for (int j = m[i]; j >= 0; j--) {
+			if (w[j] * j <= W) {
+				acc_v += v[j] * j;
+				W -= w[j] * j;
+				j = 0;
+			}
 		}
 	}
-
-
 	return acc_v;
 }
 
@@ -186,15 +186,16 @@ double value(const vector<double>& v, const vector<unsigned>& x) {
 
 float knapsack(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W) {
 	using Sol = vector<short>;
-	using Node = tuple<double, double, Sol, int>; // value, weight, vector, k
+	using Node = tuple<double, double, double, Sol, int>; // value, weight, vector, k
 	priority_queue< Node > pq; // A priority_queue is a max-heap
 
-	double best_val;// = knapsack_d(v, w, 0, W);// updating best current solution
-	pq.emplace(0.0, 0.0, Sol(v.size()), 0); // insert initial node
+	double best_val = knapsack_d(v, w, m, 0, W);// updating best current solution
+	double opt_bound = knapsack_c(v, w, m, 0, W );
+	pq.emplace(opt_bound ,0.0, 0.0, Sol(v.size()), 0); // insert initial node
 
 	while (!pq.empty()) {
 
-		auto [value, weight, x, k] = pq.top(); // structured auto (c++17)
+		auto [ignore, value, weight, x, k] = pq.top(); // structured auto (c++17)
 		pq.pop();
 		if (k == v.size()) { // base case
 			best_val = max(value, best_val);
@@ -210,12 +211,12 @@ float knapsack(const vector<double>& v, const vector<double>& w, const vector<un
 
 			if (new_weight <= W) { // is feasible
 				 // pessimistic bound
-				double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
-				best_val = max(best_val, pes_bound);
+				//double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
+				//best_val = max(best_val, pes_bound);
 
 				double opt_bound = new_value + knapsack_c(v, w, m, k + 1, W - new_weight);
 				if (opt_bound > best_val) // is promising
-					pq.emplace(new_value, new_weight, x, k + 1);
+					pq.emplace(opt_bound, new_value, new_weight, x, k + 1);
 
 			}
 		}
@@ -327,6 +328,8 @@ int main(int argc, char* argv[]) {
 		cout << "_c:" << resul << endl;
 		resul = vueltaatras1(v, t, m, T);
 		cout << "vueltaatras: " << resul << endl;
+		resul = knapsack(v, t, m, T);
+		cout << "ramificacion: " << resul << endl;
 		clock_t end = clock();
 		cout << (double(end - start) / ((clock_t)1000)) << "s" << endl;
 
