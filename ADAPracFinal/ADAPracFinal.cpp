@@ -124,8 +124,8 @@ double knapsack_c(
 				break;
 			}
 
-				acc_v += v[j] * m[j];
-				W -= w[j] * m[j];
+			acc_v += v[j] * m[j];
+			W -= w[j] * m[j];
 		}
 	}
 	return acc_v;
@@ -136,6 +136,7 @@ double knapsack_d(
 	const vector<double>& v,
 	const vector<double>& w,
 	const vector<unsigned>& m,
+	int k,
 	double W
 ) {
 	vector<size_t> idx(w.size());
@@ -145,16 +146,25 @@ double knapsack_d(
 		return v[x] / w[x] > v[y] / w[y]; });
 
 	double acc_v = 0.0;
-	for (auto i : idx) {
+	/*for (auto i : idx) {
 		for (int j = m[i]; j > 0; j--) {
-			if (w[i]*j <= W) {
-				acc_v += v[i]*j;
-				W -= w[i]*j;
+			if (w[i] * j <= W) {
+				acc_v += v[i] * j;
+				W -= w[i] * j;
 				j = 0;
 
 			}
 		}
+	}*/
+	
+
+	for (int j = k; j < m.size(); ++j) {
+		if (w[j] * m[j] <= W) {
+			acc_v += v[j] * m[j];
+			W -= w[j] * m[j];
+		}
 	}
+
 
 	return acc_v;
 }
@@ -174,7 +184,7 @@ double value(const vector<double>& v, const vector<unsigned>& x) {
 	return r;
 }
 
-float knapsack(const vector<double>& v, const vector<double>& w, double W) {
+float knapsack(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W) {
 	using Sol = vector<short>;
 	using Node = tuple<double, double, Sol, int>; // value, weight, vector, k
 	priority_queue< Node > pq; // A priority_queue is a max-heap
@@ -192,20 +202,23 @@ float knapsack(const vector<double>& v, const vector<double>& w, double W) {
 
 		}
 
-		for (unsigned j = 0; j < 2; j++) { // expanding
+		for (int j = m[k]; j >= 0; j--) { // expanding
 			x[k] = j;
 
 			double new_weight = weight + x[k] * w[k]; // updating weight
 			double new_value = value + x[k] * v[k]; // updating value
 
-			if (new_weight <= W //&& 
-				//new_value + knapsack_c(v, w, k + 1, W - new_weight) > best_val
-				)
-				pq.emplace(new_value, new_weight, x, k + 1);
+			if (new_weight <= W) { // is feasible
+				 // pessimistic bound
+				double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
+				best_val = max(best_val, pes_bound);
 
+				double opt_bound = new_value + knapsack_c(v, w, m, k + 1, W - new_weight);
+				if (opt_bound > best_val) // is promising
+					pq.emplace(new_value, new_weight, x, k + 1);
+
+			}
 		}
-
-
 		return best_val;
 
 	}
@@ -219,14 +232,14 @@ void vueltaatras(const vector<double>& v, const vector<double>& w, double W, con
 		//cout << "k==x.size" << endl;
 		return;
 	}
-	for (int j = m[k]; j >= 0 ; j--) {
-		 x[k] = j;
-		 double present_w = acc_w + x[k] * w[k];
-		 double present_v = acc_v + x[k] * v[k];
-		 if (present_w <= W && present_v + knapsack_c(v, w, m, k + 1, W - present_w) > best_v) { // if it is feasible
-			 vueltaatras(v, w, W, m, k + 1, x, best_v, sol, present_w, present_v); // expand
-		 }
-		
+	for (int j = m[k]; j >= 0; j--) {
+		x[k] = j;
+		double present_w = acc_w + x[k] * w[k];
+		double present_v = acc_v + x[k] * v[k];
+		if (present_w <= W && present_v + knapsack_c(v, w, m, k + 1, W - present_w) > best_v) { // if it is feasible
+			vueltaatras(v, w, W, m, k + 1, x, best_v, sol, present_w, present_v); // expand
+		}
+
 	}
 
 }
@@ -252,8 +265,8 @@ double vueltaatras1(const vector<double>& v, const vector<double>& w, const vect
 	}
 
 	vector<unsigned> x(v.size()), sol(v.size());
-	double best_v = knapsack_d(s_v, s_w, s_m, W);
-	vueltaatras(s_v, s_w, W,s_m, 0, x, best_v, sol, 0, 0);
+	double best_v = knapsack_d(s_v, s_w, s_m, 0, W);
+	vueltaatras(s_v, s_w, W, s_m, 0, x, best_v, sol, 0, 0);
 	return best_v;
 
 }
@@ -280,7 +293,7 @@ int main(int argc, char* argv[]) {
 		vector<unsigned> m; // maximo, valor
 
 
-		nombreFichero = "potter_n60.def";
+		nombreFichero = "potter_n15.def";
 		//nombreFichero = "mipotter.def.txt";
 
 		if (!leerFichero(nombreFichero, n, T, t, v, m))
@@ -308,10 +321,10 @@ int main(int argc, char* argv[]) {
 			s_t[i] = t[idx[i]]; // sorted weights
 			s_m[i] = m[idx[i]];
 		}
-		resul = knapsack_d(v, t,m, T);
+		resul = knapsack_d(s_v, s_t, s_m, 0, T);
 		cout << "_d:" << resul << endl;
-		resul = knapsack_c(s_v, s_t,s_m,0, T);
-		cout << "_c:" << resul<<endl;
+		resul = knapsack_c(s_v, s_t, s_m, 0, T);
+		cout << "_c:" << resul << endl;
 		resul = vueltaatras1(v, t, m, T);
 		cout << "vueltaatras: " << resul << endl;
 		clock_t end = clock();
