@@ -80,6 +80,13 @@ ostream& operator<<(ostream& os, const vector<unsigned>& vect) {
 	return os;
 }
 
+ostream& operator<<(ostream& os, const vector<double>& vect) {
+	for (unsigned i = 0; i < vect.size(); i++) {
+		os << vect[i] << " ";
+	}
+	return os;
+}
+
 double knapsack_c(
 	const vector<double>& v, // values
 	const vector<double>& w, // weights
@@ -87,34 +94,6 @@ double knapsack_c(
 	unsigned k,
 	double W // knapsack weight limit
 ) {
-	/*vector<size_t> idx(w.size()); // objects sorted by value density
-	for (size_t i = 0; i < idx.size(); i++) idx[i] = i;
-
-	sort(begin(idx), end(idx),
-		[&v, &w](size_t x, size_t y) { // function "bigger than"
-			return v[x] / w[x] > v[y] / w[y]; // sorts form bigger to lower
-		}
-	);*/
-
-	/*for (auto i : idx) {
-		for (int j = m[i]; j > 0; j--) {
-			if (W > 0) {//
-				if (w[i] * j >= W) { //>=
-					acc_v += (W / (w[i])) * v[i];
-					W = 0;
-					j = 0;
-					break;
-				}
-				else {
-					acc_v += v[i] * j;
-					W -= w[i] * j;
-					j = 0;
-				}
-			}
-		}
-	}
-	return acc_v;
-	*/
 	int n = m.size();
 	double acc_v = 0.0;
 	for (int j = k; j < n; ++j) {
@@ -139,14 +118,16 @@ double knapsack_d(
 	int k,
 	double W
 ) {
-	vector<size_t> idx(w.size());
+	int n = m.size();
+	double acc_v = 0.0;
+
+	/*vector<size_t> idx(w.size());
 	for (size_t i = 0; i < idx.size(); i++) idx[i] = i;
 
 	sort(idx.begin(), idx.end(), [&v, &w](size_t x, size_t y) {
 		return v[x] / w[x] > v[y] / w[y]; });
-
-	double acc_v = 0.0;
-	/*for (auto i : idx) {
+	
+	for (auto i : idx) {
 		for (int j = m[i]; j > 0; j--) {
 			if (w[i] * j <= W) {
 				acc_v += v[i] * j;
@@ -157,12 +138,40 @@ double knapsack_d(
 		}
 	}*/
 	
-	for (int i = k; i < m.size(); i++) {
-		for (int j = m[i]; j >= 0; j--) {
-			if (w[j] * j <= W) {
-				acc_v += v[j] * j;
-				W -= w[j] * j;
+	for (int j = k; j < n; ++j) {
+		for (int i = m[j]; i > 0; --i) {
+			if (w[j] * i <= W) {
+				acc_v += v[j] * i;
+				W -= w[j] * i;
+				i = 0;
+			}
+		}
+	}
+	
+	return acc_v;
+}
+
+double knapsack_d(const vector<double>& v,  //Sin k
+	const vector<double>& w,
+	const vector<unsigned>& m,
+	double W
+) {
+	int n = m.size();
+	double acc_v = 0.0;
+
+	vector<size_t> idx(w.size());
+	for (size_t i = 0; i < idx.size(); i++) idx[i] = i;
+
+	sort(idx.begin(), idx.end(), [&v, &w](size_t x, size_t y) {
+		return v[x] / w[x] > v[y] / w[y]; });
+
+	for (auto i : idx) {
+		for (int j = m[i]; j > 0; j--) {
+			if (w[i] * j <= W) {
+				acc_v += v[i] * j;
+				W -= w[i] * j;
 				j = 0;
+
 			}
 		}
 	}
@@ -184,7 +193,7 @@ double value(const vector<double>& v, const vector<unsigned>& x) {
 	return r;
 }
 
-float knapsack(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W) {
+float knapsack(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W ,vector<unsigned> &estadisticas) {
 	using Sol = vector<short>;
 	using Node = tuple<double, double, double, Sol, int>; // value, weight, vector, k
 	priority_queue< Node > pq; // A priority_queue is a max-heap
@@ -194,35 +203,53 @@ float knapsack(const vector<double>& v, const vector<double>& w, const vector<un
 	pq.emplace(opt_bound ,0.0, 0.0, Sol(v.size()), 0); // insert initial node
 
 	while (!pq.empty()) {
-
+		estadisticas[1] = estadisticas[1] + 1; //nodos visitados
 		auto [ignore, value, weight, x, k] = pq.top(); // structured auto (c++17)
 		pq.pop();
+
+		if (opt_bound < best_val)
+			estadisticas[5] = estadisticas[5] + 1; //eran prometedores pero fueron descartados
+
 		if (k == v.size()) { // base case
-			best_val = max(value, best_val);
+			
+			estadisticas[2]= estadisticas[2]+1;// nodo hoja visitados
+			if (value > best_val) {
+				best_val = value;
+				estadisticas[6] = estadisticas[6] + 1; //actualizado a partir nodo completado
+			}
 			continue;
 
 		}
 
 		for (int j = m[k]; j >= 0; j--) { // expanding
 			x[k] = j;
+			estadisticas[0] = estadisticas[0] + 1; //nodos explorados
 
 			double new_weight = weight + x[k] * w[k]; // updating weight
 			double new_value = value + x[k] * v[k]; // updating value
 
-			if (new_weight <= W) { // is feasible
+			if (new_weight <= W) { // es factible
 				 // pessimistic bound
-				//double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
-				//best_val = max(best_val, pes_bound);
-
+				double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
+				if (pes_bound > best_val) {
+					best_val = pes_bound;
+					estadisticas[7] = estadisticas[7] + 1; //actualizado a partir de la cota pesimista
+				}
 				double opt_bound = new_value + knapsack_c(v, w, m, k + 1, W - new_weight);
 				if (opt_bound > best_val) // is promising
 					pq.emplace(opt_bound, new_value, new_weight, x, k + 1);
-
+				else {
+					estadisticas[4] = estadisticas[4] + 1; //nodos descartados por no ser prometedores
+				}
+			}
+			else {
+				estadisticas[3] = estadisticas[3] + 1; //nodos descartados por no ser factibles
 			}
 		}
-		return best_val;
+		
 
 	}
+	return best_val;
 }
 
 void vueltaatras(const vector<double>& v, const vector<double>& w, double W, const vector<unsigned>& m,
@@ -266,7 +293,7 @@ double vueltaatras1(const vector<double>& v, const vector<double>& w, const vect
 	}
 
 	vector<unsigned> x(v.size()), sol(v.size());
-	double best_v = knapsack_d(s_v, s_w, s_m, 0, W);
+	double best_v = knapsack_d(s_v, s_w, s_m,0, W);
 	vueltaatras(s_v, s_w, W, s_m, 0, x, best_v, sol, 0, 0);
 	return best_v;
 
@@ -288,13 +315,13 @@ int main(int argc, char* argv[]) {
 		return 0;
 	}
 	else {
-		int n = -1;
-		double T = -1; //num de objetos, maximo de tiempo
-		vector<double> v, t;//tiempos
-		vector<unsigned> m; // maximo, valor
+		int n = -1; //num objetos
+		double T = -1; //maximo de tiempo
+		vector<double> v, t;//valor, tiempos
+		vector<unsigned> m; // maximo
 
 
-		nombreFichero = "potter_n15.def";
+		nombreFichero = "potter_n50.def";
 		//nombreFichero = "mipotter.def.txt";
 
 		if (!leerFichero(nombreFichero, n, T, t, v, m))
@@ -304,8 +331,7 @@ int main(int argc, char* argv[]) {
 		double resul = -1;
 		vector<unsigned> sol;
 		clock_t start = clock();
-		//resul= vueltaatras1(v, t, T, sol);
-		//knapsack(v, m, t, T);
+
 		vector<size_t> idx(v.size()); // index vector
 		iota(begin(idx), end(idx), 0);
 
@@ -316,21 +342,25 @@ int main(int argc, char* argv[]) {
 		);
 
 		vector<double> s_v(v.size()), s_t(t.size());
-		vector<unsigned> s_m(t.size());
+		vector<unsigned> s_m(t.size()), estadisticas(8);
 		for (size_t i = 0; i < v.size(); i++) {
 			s_v[i] = v[idx[i]]; // sorted values
 			s_t[i] = t[idx[i]]; // sorted weights
 			s_m[i] = m[idx[i]];
 		}
-		resul = knapsack_d(s_v, s_t, s_m, 0, T);
+		/*resul = knapsack_d(s_v, s_t, s_m, 0, T);
 		cout << "_d:" << resul << endl;
+		
+		resul = knapsack_d(v, t, m, T);
+		cout << "_d sin k:" << resul << endl;
 		resul = knapsack_c(s_v, s_t, s_m, 0, T);
-		cout << "_c:" << resul << endl;
-		resul = vueltaatras1(v, t, m, T);
+		cout << "_c:" << resul << endl;*/
+		//resul = vueltaatras1(s_v, s_t, s_m, T);
 		cout << "vueltaatras: " << resul << endl;
-		resul = knapsack(v, t, m, T);
+		resul = knapsack(s_v, s_t, s_m, T ,estadisticas);
 		cout << "ramificacion: " << resul << endl;
 		clock_t end = clock();
+		cout << estadisticas << endl;
 		cout << (double(end - start) / ((clock_t)1000)) << "s" << endl;
 
 	}
