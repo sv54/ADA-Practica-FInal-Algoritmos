@@ -48,21 +48,17 @@ bool leerFichero(string nombre, int& n, double& T, vector<double>& t, vector<dou
 		abierto = true;
 		f >> n;
 		f >> T;
-		//cout << n << " " << T << endl;
 		for (int i = 0; i < n; i++) {
 			f >> aux;
 			t.push_back(aux);
-			//cout<<t[i]<<endl;
 		}
 		for (int i = 0; i < n; i++) {
 			f >> aux;
 			v.push_back(aux);
-			//cout<<v[i]<<endl;
 		}
 		for (int i = 0; i < n; i++) {
 			f >> aux;
 			m.push_back(aux);
-			//cout<<m[i]<<endl;
 		}
 	}
 	else {
@@ -97,8 +93,8 @@ double knapsack_c(
 	int n = m.size();
 	double acc_v = 0.0;
 	for (int j = k; j < n; ++j) {
-		if (W > 0) {//
-			if (w[j] * m[j] >= W) { //>=
+		if (W > 0) {
+			if (w[j] * m[j] >= W) {
 				acc_v += (W / (w[j])) * v[j];
 				break;
 			}
@@ -121,23 +117,6 @@ double knapsack_d(
 	int n = m.size();
 	double acc_v = 0.0;
 
-	/*vector<size_t> idx(w.size());
-	for (size_t i = 0; i < idx.size(); i++) idx[i] = i;
-
-	sort(idx.begin(), idx.end(), [&v, &w](size_t x, size_t y) {
-		return v[x] / w[x] > v[y] / w[y]; });
-	
-	for (auto i : idx) {
-		for (int j = m[i]; j > 0; j--) {
-			if (w[i] * j <= W) {
-				acc_v += v[i] * j;
-				W -= w[i] * j;
-				j = 0;
-
-			}
-		}
-	}*/
-	
 	for (int j = k; j < n; ++j) {
 		for (int i = m[j]; i > 0; --i) {
 			if (w[j] * i <= W) {
@@ -147,11 +126,11 @@ double knapsack_d(
 			}
 		}
 	}
-	
+
 	return acc_v;
 }
 
-double knapsack_d(const vector<double>& v,  //Sin k
+double knapsack_d(const vector<double>& v,  //knapsack_d Sin k
 	const vector<double>& w,
 	const vector<unsigned>& m,
 	double W
@@ -192,66 +171,6 @@ double value(const vector<double>& v, const vector<unsigned>& x) {
 	}
 	return r;
 }
-
-float knapsack(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W ,vector<unsigned> &estadisticas) {
-	using Sol = vector<short>;
-	using Node = tuple<double, double, double, Sol, int>; // value, weight, vector, k
-	priority_queue< Node > pq; // A priority_queue is a max-heap
-
-	double best_val = knapsack_d(v, w, m, 0, W);// updating best current solution
-	double opt_bound = knapsack_c(v, w, m, 0, W );
-	pq.emplace(opt_bound ,0.0, 0.0, Sol(v.size()), 0); // insert initial node
-
-	while (!pq.empty()) {
-		estadisticas[1] = estadisticas[1] + 1; //nodos visitados
-		auto [ignore, value, weight, x, k] = pq.top(); // structured auto (c++17)
-		pq.pop();
-
-		if (opt_bound < best_val)
-			estadisticas[5] = estadisticas[5] + 1; //eran prometedores pero fueron descartados
-
-		if (k == v.size()) { // base case
-			
-			estadisticas[2]= estadisticas[2]+1;// nodo hoja visitados
-			if (value > best_val) {
-				best_val = value;
-				estadisticas[6] = estadisticas[6] + 1; //actualizado a partir nodo completado
-			}
-			continue;
-
-		}
-
-		for (int j = m[k]; j >= 0; j--) { // expanding
-			x[k] = j;
-			estadisticas[0] = estadisticas[0] + 1; //nodos explorados
-
-			double new_weight = weight + x[k] * w[k]; // updating weight
-			double new_value = value + x[k] * v[k]; // updating value
-
-			if (new_weight <= W) { // es factible
-				 // pessimistic bound
-				double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
-				if (pes_bound > best_val) {
-					best_val = pes_bound;
-					estadisticas[7] = estadisticas[7] + 1; //actualizado a partir de la cota pesimista
-				}
-				double opt_bound = new_value + knapsack_c(v, w, m, k + 1, W - new_weight);
-				if (opt_bound > best_val) // is promising
-					pq.emplace(opt_bound, new_value, new_weight, x, k + 1);
-				else {
-					estadisticas[4] = estadisticas[4] + 1; //nodos descartados por no ser prometedores
-				}
-			}
-			else {
-				estadisticas[3] = estadisticas[3] + 1; //nodos descartados por no ser factibles
-			}
-		}
-		
-
-	}
-	return best_val;
-}
-
 void vueltaatras(const vector<double>& v, const vector<double>& w, double W, const vector<unsigned>& m,
 	size_t k, vector<unsigned>& x, double& best_v, vector<unsigned> sol, double acc_w, double acc_v
 ) {
@@ -293,19 +212,73 @@ double vueltaatras1(const vector<double>& v, const vector<double>& w, const vect
 	}
 
 	vector<unsigned> x(v.size()), sol(v.size());
-	double best_v = knapsack_d(s_v, s_w, s_m,0, W);
+	double best_v = knapsack_d(s_v, s_w, s_m, 0, W);
 	vueltaatras(s_v, s_w, W, s_m, 0, x, best_v, sol, 0, 0);
 	return best_v;
 
 }
 
-void imprimir(double resul, double tiempo, const vector<int> copias) {
-	cout << resul << endl;
-	for (int i = 0; i < copias.size(); i++)
-		cout << copias[i] << " ";
-	cout << endl;
-	cout << tiempo;
+float knapsack(const vector<double>& v, const vector<double>& w, const vector<unsigned>& m, double W, vector<unsigned>& estadisticas) {
+	using Sol = vector<short>;
+	using Node = tuple<double, double, double, Sol, int>; // value, weight, vector, k
+	priority_queue< Node > pq; // A priority_queue is a max-heap
+
+	double best_val = knapsack_d(v, w, m, 0, W);// updating best current solution
+	double opt_bound = knapsack_c(v, w, m, 0, W);
+	pq.emplace(opt_bound, 0.0, 0.0, Sol(v.size()), 0); // insert initial node
+
+	while (!pq.empty()) {
+		estadisticas[1] = estadisticas[1] + 1; //nodos visitados
+		auto [ignore, value, weight, x, k] = pq.top(); // structured auto (c++17)
+		pq.pop();
+
+		if (opt_bound < best_val)
+			estadisticas[5] = estadisticas[5] + 1; //eran prometedores pero fueron descartados
+
+		if (k == v.size()) { // base case
+
+			estadisticas[2] = estadisticas[2] + 1;// nodo hoja visitados
+			if (value > best_val) {
+				best_val = value;
+				estadisticas[6] = estadisticas[6] + 1; //actualizado a partir nodo completado
+			}
+			continue;
+
+		}
+
+		for (int j = m[k]; j >= 0; j--) { // expanding
+			x[k] = j;
+			estadisticas[0] = estadisticas[0] + 1; //nodos explorados
+
+			double new_weight = weight + x[k] * w[k]; // updating weight
+			double new_value = value + x[k] * v[k]; // updating value
+
+			if (new_weight <= W) { // es factible
+				 // pessimistic bound
+				//double pes_bound = new_value + knapsack_d(v, w, m, k + 1, W - new_weight);
+				//if (pes_bound > best_val) {
+				//	best_val = pes_bound;
+				//	estadisticas[7] = estadisticas[7] + 1; //actualizado a partir de la cota pesimista
+				//}
+				double opt_bound = new_value + knapsack_c(v, w, m, k + 1, W - new_weight);
+				if (opt_bound > best_val) // is promising
+					pq.emplace(opt_bound, new_value, new_weight, x, k + 1);
+				else {
+					estadisticas[4] = estadisticas[4] + 1; //nodos descartados por no ser prometedores
+				}
+			}
+			else {
+				estadisticas[3] = estadisticas[3] + 1; //nodos descartados por no ser factibles
+			}
+		}
+
+
+	}
+	return best_val;
 }
+
+
+
 
 int main(int argc, char* argv[]) {
 	string nombreFichero = "";
@@ -329,7 +302,6 @@ int main(int argc, char* argv[]) {
 		vector<int> copias(n, 0);//contador de copias de cada objeto
 		double tiempoTotal = 0;
 		double resul = -1;
-		vector<unsigned> sol;
 		clock_t start = clock();
 
 		vector<size_t> idx(v.size()); // index vector
@@ -346,22 +318,25 @@ int main(int argc, char* argv[]) {
 		for (size_t i = 0; i < v.size(); i++) {
 			s_v[i] = v[idx[i]]; // sorted values
 			s_t[i] = t[idx[i]]; // sorted weights
-			s_m[i] = m[idx[i]];
+			s_m[i] = m[idx[i]];	// cantidad de copias
 		}
 		/*resul = knapsack_d(s_v, s_t, s_m, 0, T);
 		cout << "_d:" << resul << endl;
-		
 		resul = knapsack_d(v, t, m, T);
 		cout << "_d sin k:" << resul << endl;
 		resul = knapsack_c(s_v, s_t, s_m, 0, T);
-		cout << "_c:" << resul << endl;*/
-		//resul = vueltaatras1(s_v, s_t, s_m, T);
-		cout << "vueltaatras: " << resul << endl;
-		resul = knapsack(s_v, s_t, s_m, T ,estadisticas);
-		cout << "ramificacion: " << resul << endl;
+		cout << "_c:" << resul << endl;
+		resul = vueltaatras1(s_v, s_t, s_m, T);
+		cout << "vueltaatras: " << resul << endl;*/
+		resul = knapsack(s_v, s_t, s_m, T, estadisticas);
+		cout << resul << endl;
 		clock_t end = clock();
-		cout << estadisticas << endl;
-		cout << (double(end - start) / ((clock_t)1000)) << "s" << endl;
+		for (int i = 0; i < estadisticas.size()-1; i++) {
+			cout << estadisticas[i] << " ";
+		}
+		cout <<"-"<< endl;
+		//cout << estadisticas << endl;
+		cout << (double(end - start) / ((clock_t)1000)) << endl;
 
 	}
 	return 0;
